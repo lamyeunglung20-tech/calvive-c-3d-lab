@@ -21,6 +21,14 @@ const solutionColor = new THREE.Color(0xffa348);
 const durationFor = ({mass, temperature, volume, stirring}) => clamp(
   45 * Math.pow(mass / 4, .72) * Math.pow(200 / volume, .16) * Math.exp(-(temperature - 25) * .012) / (1 + stirring / 350 * .65), 10, 135
 );
+const variableNames = { mass: 'Tablet mass', temperature: 'Water temperature', volume: 'Water volume', stirring: 'Stirring speed' };
+function changedVariables(settings) {
+  if (!records.length) return [];
+  const baseline = records.at(-1);
+  return Object.keys(variableNames).filter(key =>
+    [...records, settings].some(run => Number(run[key]) !== Number(baseline[key]))
+  );
+}
 function observedDurationFor(settings) {
   const expected = durationFor(settings);
   const minTick = Math.ceil(expected * .97 * 10);
@@ -64,7 +72,14 @@ function updateSimulationUI() {
   }[state.mode];
   status.innerHTML = `<span></span> ${statusText[0]} <small lang="zh-Hant">${statusText[1]}</small>`;
   const start = $('#start-button');
-  start.disabled = state.mode === 'complete';
+  const issue = state.mode === 'idle' ? changedVariables(state.settings) : [];
+  const warning = $('#fair-test-warning');
+  warning.hidden = issue.length <= 1;
+  if (issue.length > 1) {
+    $('#fair-test-detail').textContent = `Changed: ${issue.map(key => variableNames[key]).join(' + ')}. Change only one variable, or clear the log to start a new test. 只可改變一項變項；清除紀錄可開始新測試。`;
+    start.setAttribute('aria-describedby', 'fair-test-warning');
+  } else start.removeAttribute('aria-describedby');
+  start.disabled = state.mode === 'complete' || issue.length > 1;
   const actionText = {
     idle: ['Start', '開始反應'],
     running: ['Pause', '暫停反應'],
@@ -86,6 +101,7 @@ function saveRecord() {
 function persistRecords() {
   try { localStorage.setItem('calvive-lab-records', JSON.stringify(records)); } catch {}
   renderRecords();
+  updateSimulationUI();
 }
 function renderRecords() {
   const body = $('#records-body');
@@ -139,7 +155,7 @@ function renderGraphChart() {
     chart.innerHTML = '<div class="graph-empty">Select at least one run <small lang="zh-Hant">請至少選擇一筆紀錄</small></div>';
     return;
   }
-  const left = 54, top = 32, width = 606, height = 256;
+  const left = 78, top = 32, width = 582, height = 256;
   const durations = selected.map(item => Number(item.duration));
   const ceiling = Math.max(10, Math.ceil(Math.max(...durations) * 1.15 / 10) * 10);
   const firstRun = selected[0].run, lastRun = selected.at(-1).run;
@@ -154,7 +170,7 @@ function renderGraphChart() {
   const area = points.length > 1 ? `<path class="graph-area" d="${line} L ${points.at(-1).x.toFixed(2)} ${top + height} L ${points[0].x.toFixed(2)} ${top + height} Z"/>` : '';
   const step = Math.max(1, Math.ceil(points.length / 8));
   const markers = points.map((point, i) => `<g><circle class="graph-point-halo" cx="${point.x}" cy="${point.y}" r="9"/><circle class="graph-point" cx="${point.x}" cy="${point.y}" r="5"/><title>Run ${point.run}: ${point.value.toFixed(1)} s</title>${(i % step === 0 || i === points.length - 1) ? `<text class="graph-run-tick" x="${point.x}" y="${top + height + 25}" text-anchor="middle">#${point.run}</text>` : ''}${points.length <= 8 ? `<text class="graph-value" x="${point.x}" y="${point.y - 15}" text-anchor="middle">${point.value.toFixed(1)} s</text>` : ''}</g>`).join('');
-  chart.innerHTML = `<svg viewBox="0 0 700 335" role="img" aria-label="Simulation time by experiment run; ${selected.length} selected records 模擬耗時折線圖"><defs><linearGradient id="graph-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6357e7" stop-opacity=".18"/><stop offset="100%" stop-color="#6357e7" stop-opacity="0"/></linearGradient></defs>${grid}<line class="graph-axis" x1="${left}" y1="${top}" x2="${left}" y2="${top + height}"/>${area}<path class="graph-line" d="${line}"/>${markers}</svg>`;
+  chart.innerHTML = `<svg viewBox="0 0 700 335" role="img" aria-label="Dissolution time, the dependent variable, by experiment run; ${selected.length} selected records 溶解耗時應變項折線圖"><defs><linearGradient id="graph-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6357e7" stop-opacity=".18"/><stop offset="100%" stop-color="#6357e7" stop-opacity="0"/></linearGradient></defs>${grid}<text class="graph-y-axis-title" transform="translate(17 160) rotate(-90)" text-anchor="middle">Dissolution time (s)</text><line class="graph-axis" x1="${left}" y1="${top}" x2="${left}" y2="${top + height}"/>${area}<path class="graph-line" d="${line}"/>${markers}</svg>`;
 }
 $('#open-graph').addEventListener('click', () => {
   graphSnapshot = records.map((record, index) => ({...record, run: records.length - index})).reverse();
@@ -191,7 +207,9 @@ document.querySelectorAll('.speed-button').forEach(button => button.addEventList
 }));
 $('#start-button').addEventListener('click', () => {
   if (state.mode === 'idle') {
-    state.settings = readSettings(); state.duration = observedDurationFor(state.settings); state.elapsed = 0; state.progress = 0; state.recorded = false;
+    state.settings = readSettings();
+    if (changedVariables(state.settings).length > 1) { updateSimulationUI(); return; }
+    state.duration = observedDurationFor(state.settings); state.elapsed = 0; state.progress = 0; state.recorded = false;
     setControlsLocked(true); state.mode = 'running';
   } else if (state.mode === 'running') state.mode = 'paused';
   else if (state.mode === 'paused') state.mode = 'running';
