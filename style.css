@@ -143,3 +143,20 @@
   .graph-run-list{grid-template-columns:repeat(2,minmax(0,1fr));max-height:180px}
   .graph-plot-panel{padding:15px 10px 10px}
 }
+
+/* Reserve space for the header and four experiment rows on iPad. */
+@media (min-width:700px){
+  .records-card{flex-basis:clamp(272px,35dvh,340px)}
+  .table-scroll{overflow-y:auto}
+  .records-card th{position:sticky;top:0;z-index:1}
+  .records-card td{padding-top:8px;padding-bottom:8px}
+}
+@media (min-width:700px) and (max-height:800px){
+  .control-card{padding:10px 16px}
+  .control-card > .section-heading{margin-bottom:4px}
+  .control-group{padding-top:3px;padding-bottom:4px}
+  .control-label{margin-bottom:4px}
+  .control-label label{gap:3px;line-height:1.2}
+  .speed-panel{margin-top:4px;padding:7px}
+  .action-row{margin-top:4px}
+}
