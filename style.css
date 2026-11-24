@@ -165,13 +165,11 @@
 .fair-test-warning strong{display:block;margin-bottom:2px;font-size:12px}
 .fair-test-warning strong small{margin-left:5px;font-size:10px;font-weight:600}
 .fair-test-warning span{display:block}
+.control-card.fair-test-blocked .speed-panel{display:none}
 .graph-plot-header p small{display:block;margin-top:3px;font-size:10px;color:#9aa6b8}
 .graph-y-axis-title{fill:#8794a9;font-size:11px;font-weight:700}
 @media (min-width:700px) and (max-height:800px){
   .fair-test-warning{margin-top:4px;padding:5px 7px;font-size:10px;line-height:1.2}
   .fair-test-warning strong{font-size:11px}
-  .control-card:has(.fair-test-warning:not([hidden])) .control-group{padding-top:2px;padding-bottom:3px}
-}
-@media (min-width:700px) and (max-height:700px){
-  .control-card:has(.fair-test-warning:not([hidden])) .speed-panel{display:none}
+  .control-card.fair-test-blocked .control-group{padding-top:2px;padding-bottom:3px}
 }
