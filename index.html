@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f4f7fc">
+  <meta name="description" content="Explore how tablet mass, water temperature, volume and stirring affect a 3D effervescent tablet simulation. 康鈣 C 片 3D 模擬實驗。">
+  <title>Calvive C · 3D Dissolution Lab｜康鈣 C 片實驗室</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <div class="app-shell">
+    <main>
+      <div class="main-grid">
+        <section class="control-card card" aria-labelledby="controls-heading">
+          <div class="section-heading">
+            <div class="heading-icon" aria-hidden="true">◫</div>
+            <div>
+              <h2 id="controls-heading">Experiment variables <small lang="zh-Hant">實驗變項</small></h2>
+            </div>
+          </div>
+          <div class="control-group">
+            <div class="control-label"><label for="mass"><span>Tablet mass</span><small lang="zh-Hant">康鈣 C 片質量</small></label><output id="mass-value" for="mass">4.0 g</output></div>
+            <input id="mass" type="range" min="0.5" max="6" step="0.1" value="4">
+          </div>
+          <div class="control-group">
+            <div class="control-label"><label for="temperature"><span>Water temperature</span><small lang="zh-Hant">水溫</small></label><output id="temperature-value" for="temperature">25 °C</output></div>
+            <input id="temperature" type="range" min="10" max="60" step="1" value="25">
+          </div>
+          <div class="control-group">
+            <div class="control-label"><label for="volume"><span>Water volume</span><small lang="zh-Hant">水的體積</small></label><output id="volume-value" for="volume">200 mL</output></div>
+            <input id="volume" type="range" min="50" max="300" step="10" value="200">
+          </div>
+          <div class="control-group last-group">
+            <div class="control-label"><label for="stirring"><span>Stirring speed</span><small lang="zh-Hant">攪拌速度</small></label><output id="stirring-value" for="stirring">0 rpm</output></div>
+            <input id="stirring" type="range" min="0" max="400" step="10" value="0">
+          </div>
+
+          <div class="speed-panel">
+            <div class="speed-heading"><span>Simulation speed <small lang="zh-Hant">模擬速度</small></span></div>
+            <div class="segmented" role="group" aria-label="Simulation speed 模擬速度">
+              <button class="speed-button active" data-speed="1" aria-pressed="true">1×</button>
+              <button class="speed-button" data-speed="5" aria-pressed="false">5×</button>
+              <button class="speed-button" data-speed="10" aria-pressed="false">10×</button>
+            </div>
+          </div>
+
+          <div class="action-row">
+            <button id="reset-button" class="button secondary" type="button">Reset <small lang="zh-Hant">重設</small></button>
+            <button id="start-button" class="button primary" type="button"><span id="start-icon" aria-hidden="true">▶</span><span id="start-label">Start <small lang="zh-Hant">開始反應</small></span></button>
+          </div>
+        </section>
+
+        <section class="scene-card" aria-label="3D animation 3D 動畫">
+            <div class="scene-head">
+              <div><h2>3D animation <small lang="zh-Hant">3D 動畫</small></h2></div>
+              <div id="status-badge" class="status-badge"><span></span> Ready <small lang="zh-Hant">準備就緒</small></div>
+            </div>
+            <div id="scene-container" class="scene-container">
+              <canvas id="scene" aria-label="3D animation of a Calvive C tablet dissolving in water 康鈣 C 片溶解動畫"></canvas>
+              <div class="scene-glow" aria-hidden="true"></div>
+              <div class="scene-note top-left"><span id="scene-volume">200 mL</span><small>Water volume <em lang="zh-Hant">水的體積</em></small></div>
+              <div class="scene-note top-right"><span id="scene-temp">25 °C</span><small>Water temperature <em lang="zh-Hant">水溫</em></small></div>
+              <div class="scene-note bottom-left"><span id="scene-time">00:00</span><small>Simulation time <em lang="zh-Hant">模擬時間</em></small></div>
+              <div class="scene-note bottom-right"><span id="scene-speed">1×</span><small>Playback speed <em lang="zh-Hant">播放速度</em></small></div>
+              <div class="orbit-hint" aria-hidden="true">Drag to rotate · 拖曳旋轉</div>
+              <div id="scene-fallback" class="scene-fallback" hidden>3D view unavailable <small lang="zh-Hant">此裝置未能啟動 3D 畫面</small></div>
+            </div>
+            <div class="scene-footer"><span><i class="legend-dot tablet"></i>Tablet <small lang="zh-Hant">片劑</small></span><span><i class="legend-dot bubbles"></i>Bubbles <small lang="zh-Hant">氣泡</small></span><span><i class="legend-dot liquid"></i>Solution <small lang="zh-Hant">溶液</small></span></div>
+        </section>
+      </div>
+
+      <section class="records-card card" aria-labelledby="records-heading">
+        <div class="records-head"><div class="section-heading compact"><div class="heading-icon records-icon" aria-hidden="true">≡</div><div><h2 id="records-heading">Experiment log <small lang="zh-Hant">實驗紀錄</small></h2></div></div><div class="records-actions"><button id="open-graph" type="button" class="graph-button" disabled>Line graph <small lang="zh-Hant">折線圖</small></button><button id="clear-records" type="button" class="text-button" disabled>Clear all <small lang="zh-Hant">全部清除</small></button></div></div>
+        <div class="table-scroll"><table><thead><tr><th scope="col">Run <small lang="zh-Hant">次數</small></th><th scope="col">Tablet mass <small lang="zh-Hant">片劑質量</small></th><th scope="col">Water temp. <small lang="zh-Hant">水溫</small></th><th scope="col">Volume <small lang="zh-Hant">水量</small></th><th scope="col">Stirring <small lang="zh-Hant">攪拌</small></th><th scope="col">Sim. time <small lang="zh-Hant">模擬耗時</small></th><th scope="col">Action <small lang="zh-Hant">操作</small></th></tr></thead><tbody id="records-body"><tr class="empty-row"><td colspan="7">No experiments yet <small lang="zh-Hant">尚無實驗紀錄</small></td></tr></tbody></table></div>
+      </section>
+      <footer class="page-footer">Calvive C · 3D Dissolution Lab <small lang="zh-Hant">康鈣 C 片實驗室</small></footer>
+    </main>
+  </div>
+  <dialog id="graph-dialog" class="graph-dialog" aria-labelledby="graph-title">
+    <div class="graph-dialog-header"><div><p class="graph-kicker">EXPERIMENT LOG · 實驗紀錄</p><h2 id="graph-title">Line graph <small lang="zh-Hant">折線圖</small></h2></div><button id="close-graph" class="graph-close" type="button" aria-label="Close graph 關閉折線圖">×</button></div>
+    <div class="graph-dialog-body">
+      <section class="graph-selection" aria-labelledby="graph-selection-title"><div class="graph-selection-header"><h3 id="graph-selection-title">Choose runs <small lang="zh-Hant">選擇紀錄</small></h3><button id="graph-select-all" type="button">Select all <small lang="zh-Hant">全選</small></button></div><div id="graph-run-list" class="graph-run-list"></div></section>
+      <section class="graph-plot-panel" aria-label="Simulation time line graph 模擬耗時折線圖"><div class="graph-plot-header"><p>Time (s) · 耗時（秒）</p><span id="graph-count" class="graph-count"></span></div><div id="graph-chart" class="graph-chart" aria-live="polite"></div><p class="graph-x-label">Experiment run · 實驗次數</p></section>
+    </div>
+  </dialog>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
