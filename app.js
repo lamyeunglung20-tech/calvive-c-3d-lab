@@ -1,7 +1,7 @@
 import * as THREE from './three.module.js';
 
 const $ = (selector) => document.querySelector(selector);
-const defaults = { mass: 4, temperature: 25, volume: 200, stirring: 0 };
+const defaults = { mass: 4, temperature: 15, volume: 200, stirring: 0 };
 const inputs = Object.fromEntries(Object.keys(defaults).map(key => [key, $(`#${key}`)]));
 const readSettings = () => Object.fromEntries(Object.entries(inputs).map(([key, el]) => [key, Number(el.value)]));
 let savedSpeed = 1;
