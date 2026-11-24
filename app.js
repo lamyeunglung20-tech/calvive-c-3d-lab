@@ -10,11 +10,12 @@ const state = { mode: 'idle', elapsed: 0, progress: 0, speed: savedSpeed, durati
 let records = [];
 try { records = JSON.parse(localStorage.getItem('calvive-lab-records') || '[]'); if (!Array.isArray(records)) records = []; } catch { records = []; }
 
-const formatTime = seconds => {
-  const n = Math.max(0, Math.floor(seconds));
-  return `${String(Math.floor(n / 60)).padStart(2, '0')}:${String(n % 60).padStart(2, '0')}`;
-};
 const clamp = (n, a, b) => Math.min(b, Math.max(a, n));
+const TABLET_ENTRY_SECONDS = .85;
+const formatTime = seconds => {
+  const tenths = Math.max(0, Math.round(seconds * 10));
+  return `${String(Math.floor(tenths / 600)).padStart(2, '0')}:${String(Math.floor((tenths % 600) / 10)).padStart(2, '0')}.${tenths % 10}`;
+};
 const waterColor = new THREE.Color(0x6acbff);
 const solutionColor = new THREE.Color(0xffa348);
 const durationFor = ({mass, temperature, volume, stirring}) => clamp(
@@ -37,7 +38,7 @@ function updateSettingLabels() {
 }
 
 function updateSimulationUI() {
-  $('#scene-time').textContent = formatTime(state.elapsed);
+  $('#scene-time').textContent = formatTime(clamp(state.elapsed - TABLET_ENTRY_SECONDS, 0, state.duration));
   $('#scene-speed').textContent = `${state.speed}×`;
   const status = $('#status-badge');
   status.className = 'status-badge' + (state.mode === 'running' ? ' running' : state.mode === 'complete' ? ' complete' : '');
@@ -200,7 +201,7 @@ let sceneParts = null;
 function advanceSimulation(dt) {
   if (state.mode !== 'running') return;
   state.elapsed += dt * state.speed;
-  const normalized = clamp((state.elapsed - .85) / state.duration, 0, 1);
+  const normalized = clamp((state.elapsed - TABLET_ENTRY_SECONDS) / state.duration, 0, 1);
   state.progress = 1 - Math.pow(1 - normalized, 1.55);
   if (normalized >= 1) { state.progress = 1; state.mode = 'complete'; saveRecord(); }
   updateSimulationUI();
