@@ -21,6 +21,20 @@ const solutionColor = new THREE.Color(0xffa348);
 const durationFor = ({mass, temperature, volume, stirring}) => clamp(
   45 * Math.pow(mass / 4, .72) * Math.pow(200 / volume, .16) * Math.exp(-(temperature - 25) * .012) / (1 + stirring / 350 * .65), 10, 135
 );
+function observedDurationFor(settings) {
+  const expected = durationFor(settings);
+  const minTick = Math.ceil(expected * .97 * 10);
+  const maxTick = Math.floor(expected * 1.03 * 10);
+  let tick = minTick + Math.floor(Math.random() * (maxTick - minTick + 1));
+  const previous = records.find(record =>
+    Number(record.mass) === settings.mass && Number(record.temperature) === settings.temperature &&
+    Number(record.volume) === settings.volume && Number(record.stirring) === settings.stirring
+  );
+  if (previous && tick === Math.round(Number(previous.duration) * 10)) {
+    tick += tick === maxTick ? -1 : 1;
+  }
+  return tick / 10;
+}
 
 function updateRange(el) {
   el.style.setProperty('--fill', `${((Number(el.value) - Number(el.min)) / (Number(el.max) - Number(el.min))) * 100}%`);
@@ -177,7 +191,7 @@ document.querySelectorAll('.speed-button').forEach(button => button.addEventList
 }));
 $('#start-button').addEventListener('click', () => {
   if (state.mode === 'idle') {
-    state.settings = readSettings(); state.duration = durationFor(state.settings); state.elapsed = 0; state.progress = 0; state.recorded = false;
+    state.settings = readSettings(); state.duration = observedDurationFor(state.settings); state.elapsed = 0; state.progress = 0; state.recorded = false;
     setControlsLocked(true); state.mode = 'running';
   } else if (state.mode === 'running') state.mode = 'paused';
   else if (state.mode === 'paused') state.mode = 'running';
