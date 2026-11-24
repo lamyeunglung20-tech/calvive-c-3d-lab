@@ -22,6 +22,7 @@ const durationFor = ({mass, temperature, volume, stirring}) => clamp(
   45 * Math.pow(mass / 4, .72) * Math.pow(200 / volume, .16) * Math.exp(-(temperature - 25) * .012) / (1 + stirring / 350 * .65), 10, 135
 );
 const variableNames = { mass: 'Tablet mass', temperature: 'Water temperature', volume: 'Water volume', stirring: 'Stirring speed' };
+const variableNamesZh = { mass: '片劑質量', temperature: '水溫', volume: '水量', stirring: '攪拌速度' };
 function changedVariables(settings) {
   if (!records.length) return [];
   const baseline = records.at(-1);
@@ -75,8 +76,9 @@ function updateSimulationUI() {
   const issue = state.mode === 'idle' ? changedVariables(state.settings) : [];
   const warning = $('#fair-test-warning');
   warning.hidden = issue.length <= 1;
+  $('.control-card').classList.toggle('fair-test-blocked', issue.length > 1);
   if (issue.length > 1) {
-    $('#fair-test-detail').textContent = `Changed: ${issue.map(key => variableNames[key]).join(' + ')}. Change only one variable, or clear the log to start a new test. 只可改變一項變項；清除紀錄可開始新測試。`;
+    $('#fair-test-detail').textContent = `Changed: ${issue.map(key => variableNames[key]).join(' + ')}. Keep one variable; clear the log for a new set. 已改變：${issue.map(key => variableNamesZh[key]).join('＋')}；每組只改一項。`;
     start.setAttribute('aria-describedby', 'fair-test-warning');
   } else start.removeAttribute('aria-describedby');
   start.disabled = state.mode === 'complete' || issue.length > 1;
@@ -151,26 +153,49 @@ function renderGraphChart() {
   const selected = graphSnapshot.filter(item => selectedGraphRuns.has(item.run) && Number.isFinite(Number(item.duration)));
   $('#graph-count').textContent = `${selected.length} selected · 已選 ${selected.length} 筆`;
   const chart = $('#graph-chart');
+  const xLabel = $('#graph-x-label');
   if (!selected.length) {
+    xLabel.textContent = 'Independent variable · 自變項';
     chart.innerHTML = '<div class="graph-empty">Select at least one run <small lang="zh-Hant">請至少選擇一筆紀錄</small></div>';
     return;
   }
+  const varying = Object.keys(variableNames).filter(key => selected.some(item => Number(item[key]) !== Number(selected[0][key])));
+  if (varying.length > 1) {
+    xLabel.textContent = 'Independent variable · 自變項';
+    chart.innerHTML = '<div class="graph-empty">Select runs with only one changed variable <small lang="zh-Hant">請選擇只改變一項實驗變項的紀錄</small></div>';
+    return;
+  }
+  const independent = varying[0] || null;
+  const units = { mass: 'g', temperature: '°C', volume: 'mL', stirring: 'rpm' };
+  const formatX = value => independent === 'mass' ? `${value.toFixed(1)} g` : `${value} ${units[independent]}`;
+  xLabel.textContent = independent
+    ? `Independent variable: ${variableNames[independent]} (${units[independent]}) · 自變項：${variableNamesZh[independent]}`
+    : 'Repeat trial · 重複實驗次數';
   const left = 78, top = 32, width = 582, height = 256;
   const durations = selected.map(item => Number(item.duration));
   const ceiling = Math.max(10, Math.ceil(Math.max(...durations) * 1.15 / 10) * 10);
-  const firstRun = selected[0].run, lastRun = selected.at(-1).run;
-  const x = run => firstRun === lastRun ? left + width / 2 : left + (run - firstRun) / (lastRun - firstRun) * width;
+  const ordered = independent ? [...selected].sort((a, b) => Number(a[independent]) - Number(b[independent]) || a.run - b.run) : selected;
+  const firstX = independent ? Number(ordered[0][independent]) : ordered[0].run;
+  const lastX = independent ? Number(ordered.at(-1)[independent]) : ordered.at(-1).run;
+  const x = value => firstX === lastX ? left + width / 2 : left + (value - firstX) / (lastX - firstX) * width;
   const y = duration => top + height - duration / ceiling * height;
-  const points = selected.map(item => ({run: item.run, value: Number(item.duration), x: x(item.run), y: y(Number(item.duration))}));
+  const points = ordered.map(item => ({run: item.run, value: Number(item.duration), xValue: independent ? Number(item[independent]) : item.run, x: x(independent ? Number(item[independent]) : item.run), y: y(Number(item.duration))}));
+  const groups = new Map();
+  points.forEach(point => { if (!groups.has(point.xValue)) groups.set(point.xValue, []); groups.get(point.xValue).push(point); });
+  const linePoints = [...groups].map(([value, group]) => ({x: x(value), y: y(group.reduce((sum, point) => sum + point.value, 0) / group.length)}));
   const grid = Array.from({length: 5}, (_, i) => {
     const value = ceiling * i / 4, py = y(value);
     return `<line class="graph-grid" x1="${left}" y1="${py}" x2="${left + width}" y2="${py}"/><text class="graph-tick" x="${left - 12}" y="${py + 4}" text-anchor="end">${Number(value.toFixed(1))}</text>`;
   }).join('');
-  const line = points.map((point, i) => `${i ? 'L' : 'M'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
-  const area = points.length > 1 ? `<path class="graph-area" d="${line} L ${points.at(-1).x.toFixed(2)} ${top + height} L ${points[0].x.toFixed(2)} ${top + height} Z"/>` : '';
-  const step = Math.max(1, Math.ceil(points.length / 8));
-  const markers = points.map((point, i) => `<g><circle class="graph-point-halo" cx="${point.x}" cy="${point.y}" r="9"/><circle class="graph-point" cx="${point.x}" cy="${point.y}" r="5"/><title>Run ${point.run}: ${point.value.toFixed(1)} s</title>${(i % step === 0 || i === points.length - 1) ? `<text class="graph-run-tick" x="${point.x}" y="${top + height + 25}" text-anchor="middle">#${point.run}</text>` : ''}${points.length <= 8 ? `<text class="graph-value" x="${point.x}" y="${point.y - 15}" text-anchor="middle">${point.value.toFixed(1)} s</text>` : ''}</g>`).join('');
-  chart.innerHTML = `<svg viewBox="0 0 700 335" role="img" aria-label="Dissolution time, the dependent variable, by experiment run; ${selected.length} selected records 溶解耗時應變項折線圖"><defs><linearGradient id="graph-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6357e7" stop-opacity=".18"/><stop offset="100%" stop-color="#6357e7" stop-opacity="0"/></linearGradient></defs>${grid}<text class="graph-y-axis-title" transform="translate(17 160) rotate(-90)" text-anchor="middle">Dissolution time (s)</text><line class="graph-axis" x1="${left}" y1="${top}" x2="${left}" y2="${top + height}"/>${area}<path class="graph-line" d="${line}"/>${markers}</svg>`;
+  const line = linePoints.map((point, i) => `${i ? 'L' : 'M'} ${point.x.toFixed(2)} ${point.y.toFixed(2)}`).join(' ');
+  const area = linePoints.length > 1 ? `<path class="graph-area" d="${line} L ${linePoints.at(-1).x.toFixed(2)} ${top + height} L ${linePoints[0].x.toFixed(2)} ${top + height} Z"/>` : '';
+  const tickValues = [...groups.keys()];
+  const tickStep = Math.max(1, Math.ceil(tickValues.length / 8));
+  const ticks = tickValues.map((value, i) => (i % tickStep === 0 || i === tickValues.length - 1)
+    ? `<text class="graph-run-tick" x="${x(value)}" y="${top + height + 25}" text-anchor="middle">${independent ? formatX(value) : `#${value}`}</text>` : '').join('');
+  const showValues = points.length <= 8 && [...groups.values()].every(group => group.length === 1);
+  const markers = points.map(point => `<g><circle class="graph-point-halo" cx="${point.x}" cy="${point.y}" r="9"/><circle class="graph-point" cx="${point.x}" cy="${point.y}" r="5"/><title>Run ${point.run}: ${point.value.toFixed(1)} s</title>${showValues ? `<text class="graph-value" x="${point.x}" y="${point.y - 15}" text-anchor="middle">${point.value.toFixed(1)} s</text>` : ''}</g>`).join('');
+  chart.innerHTML = `<svg viewBox="0 0 700 335" role="img" aria-label="Dissolution time by ${independent ? variableNames[independent] : 'repeat trial'}; ${selected.length} selected records 溶解耗時應變項折線圖"><defs><linearGradient id="graph-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6357e7" stop-opacity=".18"/><stop offset="100%" stop-color="#6357e7" stop-opacity="0"/></linearGradient></defs>${grid}<text class="graph-y-axis-title" transform="translate(17 160) rotate(-90)" text-anchor="middle">Dissolution time (s)</text><line class="graph-axis" x1="${left}" y1="${top}" x2="${left}" y2="${top + height}"/>${area}<path class="graph-line" d="${line}"/>${ticks}${markers}</svg>`;
 }
 $('#open-graph').addEventListener('click', () => {
   graphSnapshot = records.map((record, index) => ({...record, run: records.length - index})).reverse();
