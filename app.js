@@ -153,23 +153,20 @@ function renderGraphChart() {
   const selected = graphSnapshot.filter(item => selectedGraphRuns.has(item.run) && Number.isFinite(Number(item.duration)));
   $('#graph-count').textContent = `${selected.length} selected · 已選 ${selected.length} 筆`;
   const chart = $('#graph-chart');
-  const xLabel = $('#graph-x-label');
   if (!selected.length) {
-    xLabel.textContent = 'Independent variable · 自變項';
     chart.innerHTML = '<div class="graph-empty">Select at least one run <small lang="zh-Hant">請至少選擇一筆紀錄</small></div>';
     return;
   }
   const varying = Object.keys(variableNames).filter(key => selected.some(item => Number(item[key]) !== Number(selected[0][key])));
   if (varying.length > 1) {
-    xLabel.textContent = 'Independent variable · 自變項';
     chart.innerHTML = '<div class="graph-empty">Select runs with only one changed variable <small lang="zh-Hant">請選擇只改變一項實驗變項的紀錄</small></div>';
     return;
   }
   const independent = varying[0] || null;
   const units = { mass: 'g', temperature: '°C', volume: 'mL', stirring: 'rpm' };
   const formatX = value => independent === 'mass' ? `${value.toFixed(1)} g` : `${value} ${units[independent]}`;
-  xLabel.textContent = independent
-    ? `Independent variable: ${variableNames[independent]} (${units[independent]}) · 自變項：${variableNamesZh[independent]}`
+  const xTitle = independent
+    ? `${variableNames[independent]} (${units[independent]}) · ${variableNamesZh[independent]}`
     : 'Repeat trial · 重複實驗次數';
   const left = 78, top = 32, width = 582, height = 256;
   const durations = selected.map(item => Number(item.duration));
@@ -195,7 +192,7 @@ function renderGraphChart() {
     ? `<text class="graph-run-tick" x="${x(value)}" y="${top + height + 25}" text-anchor="middle">${independent ? formatX(value) : `#${value}`}</text>` : '').join('');
   const showValues = points.length <= 8 && [...groups.values()].every(group => group.length === 1);
   const markers = points.map(point => `<g><circle class="graph-point-halo" cx="${point.x}" cy="${point.y}" r="9"/><circle class="graph-point" cx="${point.x}" cy="${point.y}" r="5"/><title>Run ${point.run}: ${point.value.toFixed(1)} s</title>${showValues ? `<text class="graph-value" x="${point.x}" y="${point.y - 15}" text-anchor="middle">${point.value.toFixed(1)} s</text>` : ''}</g>`).join('');
-  chart.innerHTML = `<svg viewBox="0 0 700 335" role="img" aria-label="Dissolution time by ${independent ? variableNames[independent] : 'repeat trial'}; ${selected.length} selected records 溶解耗時應變項折線圖"><defs><linearGradient id="graph-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6357e7" stop-opacity=".18"/><stop offset="100%" stop-color="#6357e7" stop-opacity="0"/></linearGradient></defs>${grid}<text class="graph-y-axis-title" transform="translate(17 160) rotate(-90)" text-anchor="middle">Dissolution time (s)</text><line class="graph-axis" x1="${left}" y1="${top}" x2="${left}" y2="${top + height}"/>${area}<path class="graph-line" d="${line}"/>${ticks}${markers}</svg>`;
+  chart.innerHTML = `<svg viewBox="0 0 700 365" role="img" aria-label="Dissolution time by ${independent ? variableNames[independent] : 'repeat trial'}; ${selected.length} selected records 溶解耗時應變項折線圖"><defs><linearGradient id="graph-fill" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6357e7" stop-opacity=".18"/><stop offset="100%" stop-color="#6357e7" stop-opacity="0"/></linearGradient></defs>${grid}<text class="graph-y-axis-title" transform="translate(17 160) rotate(-90)" text-anchor="middle">Dissolution time (s)</text><line class="graph-axis" x1="${left}" y1="${top}" x2="${left}" y2="${top + height}"/><line class="graph-axis" x1="${left}" y1="${top + height}" x2="${left + width}" y2="${top + height}"/>${area}<path class="graph-line" d="${line}"/>${ticks}${markers}<text class="graph-x-axis-title" x="${left + width / 2}" y="350" text-anchor="middle">${xTitle}</text></svg>`;
 }
 $('#open-graph').addEventListener('click', () => {
   graphSnapshot = records.map((record, index) => ({...record, run: records.length - index})).reverse();
